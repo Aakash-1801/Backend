@@ -30,14 +30,11 @@ router.post('/postjob', async (req, res) => {
 
 router.get('/getalljobs', async (req, res) => {
     try {
-        const n = parseInt(req.query.n, 10); // may be undefined or NaN
-
+        const n = parseInt(req.query.n, 10);
         let query = Company.find({}, { opportunity: 1, _id: 0 });
-
         if (!isNaN(n)) {
-            query = query.limit(n); // apply limit only if n is valid
+            query = query.limit(n);
         }
-
         const companies = await query;
         res.json(companies);
     } catch (err) {
@@ -46,6 +43,37 @@ router.get('/getalljobs', async (req, res) => {
     }
 });
 
+router.get('/getallcompanies', async (req, res) => {
+    try {
+      const n = parseInt(req.query.n, 10);
+  
+      const pipeline = [
+        {
+          $group: {
+            _id: "$company",           // group by company name
+            doc: { $first: "$$ROOT" }  // take the first occurrence
+          }
+        },
+        {
+          $replaceRoot: { newRoot: "$doc" }
+        },
+        {
+          $project: { _id: 0, company: 1 }  // return only the company field
+        }
+      ];
+  
+      if (!isNaN(n)) {
+        pipeline.push({ $limit: n });
+      }
+  
+      const companies = await Company.aggregate(pipeline);
+      res.json(companies);
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+  
 
 router.get('/getjob/:opportunity', async (req, res) => {
     try {
