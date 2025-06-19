@@ -28,6 +28,41 @@ router.post('/postjob', async (req, res) => {
     }
 });
 
+router.get('/getalljobs', async (req, res) => {
+    try {
+        const n = parseInt(req.query.n, 10); // may be undefined or NaN
+
+        let query = Company.find({}, { opportunity: 1, _id: 0 });
+
+        if (!isNaN(n)) {
+            query = query.limit(n); // apply limit only if n is valid
+        }
+
+        const companies = await query;
+        res.json(companies);
+    } catch (err) {
+        console.error("Error fetching jobs:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+
+router.get('/getjob/:opportunity', async (req, res) => {
+    try {
+        const opportunity = decodeURIComponent(req.params.opportunity);
+        const job = await Company.findOne({
+        opportunity: { $regex: new RegExp(`^${opportunity}$`, 'i') }
+        });
+
+        if (!job) return res.status(404).json({ message: 'Job not found' });
+        res.json(job);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+  
+
 // router.post('/postjob', async (req, res) => {
 //     try {
 //         const companies = Array.isArray(req.body) ? req.body : [req.body];

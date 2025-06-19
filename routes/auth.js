@@ -5,6 +5,7 @@ const User = require('../models/User');
 
 const router = express.Router();
 
+// ✅ Register user
 router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -14,15 +15,25 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const user = new User({ email, password });
+    // ✅ Hash password before saving
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = new User({ email, password: hashedPassword });
     await user.save();
-    res.status(201).json({ message: 'User created successfully' });
+
+    // ✅ Optional: Generate token upon signup
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '1h'
+    });
+
+    res.status(201).json({ message: 'User created successfully', token });
   } catch (err) {
     console.error('Register Error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
+// ✅ Login user and send JWT
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -36,13 +47,14 @@ router.post('/login', async (req, res) => {
       expiresIn: '1h'
     });
 
-    res.json({ token });
+    res.json({ token }); // ✅ Frontend will use this
   } catch (err) {
     console.error('Login Error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
+// ✅ Reset password
 router.post('/reset-password', async (req, res) => {
   try {
     const { email, newPassword } = req.body;
@@ -54,7 +66,6 @@ router.post('/reset-password', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     user.password = hashedPassword;
-
     await user.save();
 
     res.json({ message: 'Password reset successful' });
@@ -63,6 +74,5 @@ router.post('/reset-password', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 module.exports = router;
