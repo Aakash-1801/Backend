@@ -7,6 +7,7 @@ const createroutes = require('./routes/postjob');
 const authRoutes = require('./routes/auth');
 const profileRouts = require('./routes/profile')
 const registrationrouts = require('./routes/Registration')
+const oppRoutes = require('./routes/Opp_add')
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use('/api', createroutes);
 app.use('/api', authRoutes);
 app.use('/api', profileRouts);
 app.use('/api', registrationrouts);
+app.use('/api/opportunity', oppRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {

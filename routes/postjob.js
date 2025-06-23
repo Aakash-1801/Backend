@@ -1,128 +1,24 @@
 const express = require('express');
-const Company = require('../models/Company');
+const Opportunity = require('../models/Opp')
 
 const router = express.Router();
 
-router.post('/postjob', async (req, res) => {
-    try {
-        const { opportunity, location,} = req.body;
-        
-        if (!opportunity) {
-            res.status(400).json({ message: "opportunity field needed" });
-        }
-        if (!location) {
-            res.status(400).json({ message: "location field needed" });
-        }
+router.post('/getalljobs', async (req, res) => {
+  try {
+    const { type, mode, tag } = req.body;
 
-        const exist = await Company.findOne({ opportunity });
+    const query = {};
 
-        if (exist) {
-            res.status(400).json({ message: "career opportunity already exists" });
-        }
-        const company = new Company(req.body);
-        await company.save();
-        res.status(201).json({ message: "Career opportunity created successfully " });
-    } catch (err) {
-        console.error("Error creating job");
-        res.status(500).json({ message: "error creating job" });
-    }
+    if (type?.trim()) query.type = type;
+    if (mode?.trim()) query.mode = mode;
+    if (tag?.trim()) query.tags = { $in: [tag] };
+
+    const jobs = await Opportunity.find(query).sort({ createdAt: -1 });
+    res.json(jobs);
+  } catch (err) {
+    console.error('Get filtered jobs error:', err);
+    res.status(500).json({ error: 'Server error while fetching jobs' });
+  }
 });
-
-router.get('/getalljobs', async (req, res) => {
-    try {
-        const n = parseInt(req.query.n, 10);
-        let query = Company.find({}, { opportunity: 1, _id: 0 });
-        if (!isNaN(n)) {
-            query = query.limit(n);
-        }
-        const companies = await query;
-        res.json(companies);
-    } catch (err) {
-        console.error("Error fetching jobs:", err);
-        res.status(500).json({ message: "Server error" });
-    }
-});
-
-router.get('/getallcompanies', async (req, res) => {
-    try {
-      const n = parseInt(req.query.n, 10);
-  
-      const pipeline = [
-        {
-          $group: {
-            _id: "$company",           // group by company name
-            doc: { $first: "$$ROOT" }  // take the first occurrence
-          }
-        },
-        {
-          $replaceRoot: { newRoot: "$doc" }
-        },
-        {
-          $project: { _id: 0, company: 1 }  // return only the company field
-        }
-      ];
-  
-      if (!isNaN(n)) {
-        pipeline.push({ $limit: n });
-      }
-  
-      const companies = await Company.aggregate(pipeline);
-      res.json(companies);
-    } catch (err) {
-      console.error("Error fetching jobs:", err);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-  
-
-router.get('/getjob/:opportunity', async (req, res) => {
-    try {
-        const opportunity = decodeURIComponent(req.params.opportunity);
-        const job = await Company.findOne({
-        opportunity: { $regex: new RegExp(`^${opportunity}$`, 'i') }
-        });
-
-        if (!job) return res.status(404).json({ message: 'Job not found' });
-        res.json(job);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-  
-
-// router.post('/postjob', async (req, res) => {
-//     try {
-//         const companies = Array.isArray(req.body) ? req.body : [req.body];
-//         const errors = [];
-
-//         for (const company of companies) {
-//             const { opportunity, location } = company;
-
-//             if (!opportunity || !location) {
-//                 errors.push({ opportunity, error: "Missing required fields" });
-//                 continue;
-//             }
-
-//             const exists = await Company.findOne({ opportunity });
-//             if (exists) {
-//                 errors.push({ opportunity, error: "Already exists" });
-//                 continue;
-//             }
-//             const newCompany = new Company(company);
-//             await newCompany.save();
-//         }
-
-//         if (errors.length > 0) {
-//             return res.status(207).json({ message: "Some entries failed", errors });
-//         }
-
-//         res.status(201).json({ message: "All companies added successfully" });
-
-//     } catch (err) {
-//         console.error("Bulk insert error:", err);
-//         res.status(500).json({ message: "Server error" });
-//     }
-// });
 
 module.exports = router;
