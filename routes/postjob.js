@@ -5,19 +5,20 @@ const router = express.Router();
 
 router.post('/getalljobs', async (req, res) => {
   try {
-    const { type, mode, tag } = req.body;
-
+    const filters = req.body;
     const query = {};
 
-    if (type?.trim()) query.type = type;
-    if (mode?.trim()) query.mode = mode;
-    if (tag?.trim()) query.tags = { $in: [tag] };
+    if (filters.type) query.type = filters.type;
+    if (filters.mode) query.mode = filters.mode;
+    if (filters.category) query.category = filters.category;
+    if (filters.eligibility) query.eligibility = filters.eligibility;
+    if (filters.location) query.location = filters.location;
+    if (filters.tag) query.tags = filters.tag;
 
-    const jobs = await Opportunity.find(query).sort({ createdAt: -1 });
+    const jobs = await Opportunity.find(query);
     res.json(jobs);
   } catch (err) {
-    console.error('Get filtered jobs error:', err);
-    res.status(500).json({ error: 'Server error while fetching jobs' });
+    res.status(500).json({ error: 'Could not fetch jobs' });
   }
 });
 

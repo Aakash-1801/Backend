@@ -5,14 +5,16 @@ const opportunitySchema = new mongoose.Schema({
   company: { type: String, required: true },
   description: {type: String},
   type: { type: String, enum: ['Job', 'Internship', 'Summer Internship'], required: true },
-  category: { type: String }, // e.g., "Computer Science"
+  branch: {type: String},  // e.g., "Computer Science", "electrical"
+  category: { type: String },  // frontend,backend etc
   technologies: [String],     // ["React", "MongoDB"]
   tags: [String],             // ["Teamwork", "Agile"]
-  eligibility: { type: String },
-  location: { type: String },
-  mode: { type: String, enum: ['Remote', 'Onsite', 'Hybrid'] },
-  duration: { type: String },
-  stipend: { type: String },
+  proffession: {type: String}, // student,some female only, working proffessional
+  eligibility: { type: String },  // some more details company provide
+  location: { type: String },  // specific location or pan india
+  mode: { type: String, enum: ['Remote', 'Onsite', 'Hybrid', 'inOffice'] },
+  duration: { type: String }, // fulltime, parttime
+  stipend: { type: String }, //if internship
   annual_salary_min: { type: Number },
   annual_salary_max: {
     type: Number,
@@ -23,12 +25,11 @@ const opportunitySchema = new mongoose.Schema({
       message: props => `Max salary must be >= min`
     }
   },
-  work_details: { type: String },
-  last_date: { type: Date },
+  work_details: { type: String },  // extra details ex 20 hrs/week | Duration: 3 months
+  last_date: { type: Date },  // to participate
   application_url: { type: String },
   contact_email: { type: String },
   is_active: { type: Boolean, default: true },
-
   applied: { type: Number, default: 0 },
   logo_url: { type: String } // e.g., https://company.com/logo.png
 
