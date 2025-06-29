@@ -1,23 +1,20 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 const companySchema = new mongoose.Schema({
-  opportunity: { type: String, required: true },
-  company: { type: String },
-  description: { type: String },
-  eligibility: { type: String },
-  location: { type: String, required: true },
-  annual_salary_min: { type: Number, min: 0 },
-  annual_salary_max: {
-    type: Number,
-    min: 0,
-    validate: {
-      validator: function (v) {
-        return v >= this.annual_salary_min;
-      },
-      message: props => `Maximum salary (${props.value}) must be greater than or equal to minimum salary`
-    }
-  },
-  work_details: { type: String }
-}, { timestamps: true });
+  role: { type: String, default: 'Company' },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  companyName: String,
+  phone: String,
+  address: String,
+  companyLogo: String,
+});
+
+// companySchema.pre('save', async function (next) {
+//   if (!this.isModified('password')) return next();
+//   this.password = await bcrypt.hash(this.password, 10);
+//   next();
+// });
 
 module.exports = mongoose.model('Company', companySchema);

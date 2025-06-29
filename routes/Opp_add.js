@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Opportunity = require('../models/Opp');
 const FilterOptions = require('../models/FilterOption');
+const Registration = require('../models/Registration');
 const updateFilters = require('../middleware/updateFilters');
 
 // POST /api/opportunity/add
@@ -45,6 +46,28 @@ router.get('/filters', async (req, res) => {
   } catch (err) {
     console.error('Fetch filters error:', err);
     res.status(500).json({ error: 'Failed to fetch filters' });
+  }
+});
+
+router.get('/by-company', async (req, res) => {
+  try {
+    const companyName = req.body.companyName;
+    const opportunities = await Opportunity.find({ company: companyName }).select('opportunity');
+
+    const result = await Promise.all(
+      opportunities.map(async (opp) => {
+        const users = await Registration.find({ opportunity: opp.opportunity });
+        return {
+          opportunity: opp.opportunity,
+          registeredUsers: users
+        };
+      })
+    );
+
+    res.json(result);
+  } catch (err) {
+    console.error('Error fetching company opportunities with users:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

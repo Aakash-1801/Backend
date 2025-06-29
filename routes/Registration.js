@@ -1,27 +1,10 @@
 const express = require('express');
-const multer = require('multer');
+const upload = require('../middleware/multer');
 const path = require('path');
 const Registration = require('../models/Registration');
+const opp = require('../models/Opp');
 
 const router = express.Router();
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({ storage });
-
-const fs = require('fs');
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
 
 router.post('/registration', upload.single('resume'), async (req, res) => {
   try {
@@ -37,8 +20,13 @@ router.post('/registration', upload.single('resume'), async (req, res) => {
       branch,
       cgpa,
       opportunity,
-      resume
     } = req.body;
+    // console.log('Registration data:', registration);
+    const resumePath = req.file ? req.file.path : null;
+    const exists = await Registration.findOne({ email, opportunity });
+    if (exists || !opportunity) {
+      return res.status(400).json({ message: 'User already registared' });
+    }
     const registration = new Registration({
       fullName,
       email,
@@ -50,11 +38,13 @@ router.post('/registration', upload.single('resume'), async (req, res) => {
       branch,
       cgpa,
       opportunity,
-      resume: req.file ? req.file.path : null
+      resume: resumePath
     });
-    // console.log('Registration data:', registration);
-    const resumePath = req.file ? req.file.path : null;
     await registration.save();
+    await opp.findOneAndUpdate(
+      { opportunity: opportunity },
+      { $inc: { applied: 1 } }
+    );
     res.status(201).json({ message: 'Registration successful', resumePath });
 
   } catch (err) {

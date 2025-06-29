@@ -1,73 +1,93 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const upload = require('../middleware/multer');
 const User = require('../models/User');
+const Company = require('../models/Company');
 
 const router = express.Router();
 
-// ✅ Register user
-router.post('/register', async (req, res) => {
+// REGISTER (User or Company)
+router.post('/register', upload.fields([
+  { name: 'profilePic', maxCount: 1 },
+  { name: 'companyLogo', maxCount: 1 }
+]), async (req, res) => {
   try {
-    // const { email, password } = req.body;
-    const email = req.body.email;
-    const password = req.body.password?.trim();
+    const { role, email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+    if (!email || !password || !role) {
+      return res.status(400).json({ message: 'Email, password, and role are required' });
     }
 
-    console.log('signup',req.body);
-    const exists = await User.findOne({ email });
-    if (exists) {
-      return res.status(400).json({ message: 'User already exists' });
+    const existsInUser = await User.findOne({ email });
+    const existsInCompany = await Company.findOne({ email });
+
+    if (existsInUser || existsInCompany) {
+      return res.status(400).json({ message: 'Email already registered' });
     }
-    const user = new User({ email, password });
-    await user.save();
-    
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h'
-    });
-    
-    res.status(201).json({ message: 'User created successfully', token });
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    if (role === 'User') {
+      const newUser = new User({
+        ...req.body,
+        password: hashedPassword,
+        profilePic: req.files.profilePic[0] ? `/uploads/${req.files.profilePic[0].filename}` : undefined,
+      });
+      await newUser.save();
+
+      const token = jwt.sign({ email: newUser.email, role: role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      return res.status(201).json({ message: 'User registered', token });
+    } else if (role === 'Company') {
+      const newCompany = new Company({
+        ...req.body,
+        password: hashedPassword,
+        companyLogo: req.files.companyLogo[0] ? `/uploads/${req.files.companyLogo[0].filename}` : undefined,
+      });
+      await newCompany.save();
+
+      const token = jwt.sign({ email: newCompany.email, role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      return res.status(201).json({ message: 'Company registered', token });
+    } else {
+      return res.status(400).json({ message: 'Invalid role specified' });
+    }
+
   } catch (err) {
     console.error('Register Error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// ✅ Login user and send JWT
+// LOGIN (User or Company)
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    console.log('login', req.body);
+    const { email, password, role } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials1' });
+    const Model = role === 'Company' ? Company : User;
+    const found = await Model.findOne({ email });
+
+    if (!found) {
+      return res.status(401).json({ message: `${role} not found` });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, found.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials2' });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+    const token = jwt.sign({ email: found.email, role }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    res.json({ token });
+    res.json({ message: `${role} login successful`, token });
   } catch (err) {
     console.error('Login Error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-
 // ✅ Reset password
 router.post('/reset-password', async (req, res) => {
   try {
     const { email, newPassword } = req.body;
-    console.log('reset',req.body);
     if (!email || !newPassword) {
       return res.status(400).json({ message: 'Email and new password are required' });
     }
