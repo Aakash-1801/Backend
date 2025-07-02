@@ -19,10 +19,10 @@ const updateFiltersMiddleware = async (req, res, next) => {
       });
     }
     await filters.save();
-    next(); // proceed to the actual route handler
+    next();
   } catch (err) {
     console.error('Filter update error:', err);
-    next(); // even if filter fails, don't block job creation
+    next();
   }
 };
 

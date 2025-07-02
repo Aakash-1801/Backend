@@ -3,10 +3,11 @@ const verifyToken = require('../middleware/auth');
 const upload = require('../middleware/multer');
 const User = require('../models/User');
 const Company = require('../models/Company');
+const checkPermission = require('../middleware/checkpermission')
 
 const router = express.Router();
 
-router.get('/profile', verifyToken, async (req, res) => {
+router.get('/profile', verifyToken, checkPermission('view-profile'), async (req, res) => {
   const { email, role } = req.user;
 
   try {
@@ -34,8 +35,10 @@ router.get('/profile', verifyToken, async (req, res) => {
   }
 });
 
-router.post('/editprofile', verifyToken, upload.single('image'), async (req, res) => {
+router.post('/editprofile', verifyToken, checkPermission('edit-profile'), upload.single('image'), async (req, res) => {
   const { email, role } = req.user;
+
+  console.log(req);
 
   try {
     if (role === 'Company') {

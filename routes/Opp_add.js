@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const Opportunity = require('../models/Opp');
 const FilterOptions = require('../models/FilterOption');
-const Registration = require('../models/Registration');
 const updateFilters = require('../middleware/updateFilters');
+const verifyToken = require('../middleware/auth');
+const checkPermission = require('../middleware/checkpermission');
 
 // POST /api/opportunity/add
-router.post('/add', updateFilters, async (req, res) => {
+router.post('/add', verifyToken, checkPermission('create-opportunity'), updateFilters, async (req, res) => {
   try {
     const data = req.body;
     const requiredFields = ['opportunity', 'company', 'type'];
@@ -49,26 +50,26 @@ router.get('/filters', async (req, res) => {
   }
 });
 
-router.get('/by-company', async (req, res) => {
-  try {
-    const companyName = req.body.companyName;
-    const opportunities = await Opportunity.find({ company: companyName }).select('opportunity');
+// router.get('/by-company', async (req, res) => {
+//   try {
+//     const companyName = req.body.companyName;
+//     const opportunities = await Opportunity.find({ company: companyName }).select('opportunity');
 
-    const result = await Promise.all(
-      opportunities.map(async (opp) => {
-        const users = await Registration.find({ opportunity: opp.opportunity });
-        return {
-          opportunity: opp.opportunity,
-          registeredUsers: users
-        };
-      })
-    );
+//     const result = await Promise.all(
+//       opportunities.map(async (opp) => {
+//         const users = await Registration.find({ opportunity: opp.opportunity });
+//         return {
+//           opportunity: opp.opportunity,
+//           registeredUsers: users
+//         };
+//       })
+//     );
 
-    res.json(result);
-  } catch (err) {
-    console.error('Error fetching company opportunities with users:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+//     res.json(result);
+//   } catch (err) {
+//     console.error('Error fetching company opportunities with users:', err);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
 
 module.exports = router;

@@ -10,7 +10,9 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   typpe: { type: String, required: true },
   address: { type: String, required: true },
-  profilePic: {type: String}
+  profilePic: { type: String },
+  resetToken: {type: String},
+  resetTokenExpires: {type: Date}
 });
 
 // userSchema.pre('save', async function (next) {

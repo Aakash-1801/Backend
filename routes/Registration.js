@@ -1,14 +1,15 @@
 const express = require('express');
 const upload = require('../middleware/multer');
-const path = require('path');
 const Registration = require('../models/Registration');
+const companydata = require('../models/Company');
 const opp = require('../models/Opp');
+const verifyToken = require('../middleware/auth');
+const checkPermission = require('../middleware/checkpermission');
 
 const router = express.Router();
 
-router.post('/registration', upload.single('resume'), async (req, res) => {
+router.post('/registration', verifyToken, checkPermission('register-opportunity'), upload.single('resume'), async (req, res) => {
   try {
-    // console.log('Request body:', req.body);
     const {
       fullName,
       email,
@@ -50,6 +51,48 @@ router.post('/registration', upload.single('resume'), async (req, res) => {
   } catch (err) {
     console.error('Registration error: 123', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/my-registrations', verifyToken, checkPermission('view-own-registrations'), async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const registrations = await Registration.find({ email: userEmail }).sort({ createdAt: -1 });
+    
+    res.status(200).json(registrations);
+  } catch (err) {
+    console.error('Error fetching registrations:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.get('/company-registrations', verifyToken, verifyToken, checkPermission('view-registrations'), async (req, res) => {
+  const { email, role } = req.user;
+
+  if (role !== 'Company') {
+    return res.status(403).json({ message: 'Access denied: not a company' });
+  }
+
+  try {
+    const company = await companydata.findOne({ email: email });
+    const jobs = await opp.find({ company: company.companyName }).select('opportunity');
+    const jobNames = jobs.map(job => job.opportunity);
+
+    // const registrations = await Registration.find({ opportunity: { $in: jobNames } });
+    const allreg = [];
+    for (const it of jobNames) {
+      const rg = await Registration.find({ opportunity: it });
+      allreg.push({
+        opp: it,
+        size: rg.length,
+        regist: rg
+      })
+    }
+
+    res.json(allreg);
+  } catch (err) {
+    console.error("Error fetching registrations for company:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
